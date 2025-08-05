@@ -69,15 +69,6 @@ jobs:
         run: |
           echo "NEW_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      - name: 验证npm配置
-        run: |
-          echo "Registry: $(npm config get registry)"
-          echo "Auth token configured: $(if [ -n "$NODE_AUTH_TOKEN" ]; then echo "Yes"; else echo "No"; fi)"
-          echo "Package name: $(npm pkg get name)"
-          echo "Package version: $(npm pkg get version)"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: 验证构建产物
         run: |
           echo "检查dist目录内容:"
@@ -86,19 +77,6 @@ jobs:
           test -f dist/nodes/FeishuProject/FeishuProject.node.js && echo "✅ FeishuProject.node.js 存在"
           test -f dist/credentials/FeishuProjectApi.credentials.js && echo "✅ FeishuProjectApi.credentials.js 存在"
           test -f dist/package.json && echo "✅ dist/package.json 存在"
-
-      - name: 配置NPM认证
-        run: |
-          echo "检查环境变量..."
-          echo "NODE_AUTH_TOKEN长度: ${#NODE_AUTH_TOKEN}"
-          echo "创建 .npmrc 文件..."
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
-          echo "验证配置..."
-          cat ~/.npmrc
-          npm whoami
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 发布到NPM
         run: |
