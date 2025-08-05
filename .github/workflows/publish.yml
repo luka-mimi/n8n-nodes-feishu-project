@@ -19,7 +19,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-
+    environment: 正式环境  # ⬅️ 加上这一行！
     permissions:
       contents: write
       packages: write
