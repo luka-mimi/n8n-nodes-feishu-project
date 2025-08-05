@@ -1,0 +1,69 @@
+# 依赖文件
+node_modules/
+yarn.lock
+
+# 构建产物
+dist/
+build/
+
+# 日志文件
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 覆盖率目录
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# 临时文件
+.tmp/
+tmp/
+*.tgz
+
+# 编辑器和IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 环境配置
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# NPM包文件
+*.tgz
+
+# 可选的npm cache目录
+.npm
+
+# 可选的REPL历史
+.node_repl_history
+
+# 输出的二进制文件
+*.tar.gz
+
+# Yarn Integrity文件
+.yarn-integrity

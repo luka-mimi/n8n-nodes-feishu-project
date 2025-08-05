@@ -1,0 +1,118 @@
+name: 自动发布到NPM和GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: '版本类型'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行代码检查
+        run: npm run lint
+
+      - name: 构建项目
+        run: npm run build
+
+      - name: 配置Git用户
+        run: |
+          git config --local user.email "luka.cat.mimi@gmail.com"
+          git config --local user.name "luka"
+
+      - name: 更新版本号（手动触发）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git tag $NEW_VERSION
+          git push origin main --follow-tags
+
+      - name: 获取版本号（标签触发）
+        if: github.event_name == 'push'
+        run: |
+          echo "NEW_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: 发布到NPM
+        run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 生成变更日志
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            CHANGELOG=$(sed -n "/## \[${{ env.NEW_VERSION }}\]/,/## \[/p" CHANGELOG.md | head -n -1)
+          else
+            CHANGELOG="🎉 版本 ${{ env.NEW_VERSION }} 发布
+
+            ### 主要特性
+            - ✅ 支持飞书项目完整API集成
+            - ✅ 16个功能模块，73个操作
+            - ✅ 完善的文件上传和附件管理
+            - ✅ 统一的JSON参数设计
+            - ✅ TypeScript类型支持
+
+            ### 安装方式
+            \`\`\`bash
+            npm install @luka-cat-mimi/n8n-nodes-feishu-project
+            \`\`\`
+
+            详细使用说明请参见 [README.md](https://github.com/luka-mimi/n8n-nodes-feishu-project#readme)"
+          fi
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 创建GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.NEW_VERSION }}
+          name: 版本 ${{ env.NEW_VERSION }}
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 发布成功通知
+        run: |
+          echo "🎉 发布成功！"
+          echo "📦 NPM包: https://www.npmjs.com/package/@luka-cat-mimi/n8n-nodes-feishu-project"
+          echo "🚀 GitHub Release: https://github.com/luka-mimi/n8n-nodes-feishu-project/releases/tag/${{ env.NEW_VERSION }}"

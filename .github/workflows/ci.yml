@@ -1,0 +1,104 @@
+name: 持续集成
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行代码检查
+        run: npm run lint
+
+      - name: 检查代码格式
+        run: npm run format -- --check
+
+      - name: 构建项目
+        run: npm run build
+
+      - name: 检查构建产物
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ 构建失败：dist目录不存在"
+            exit 1
+          fi
+          if [ ! -f "dist/nodes/FeishuProject/FeishuProject.node.js" ]; then
+            echo "❌ 构建失败：主要节点文件不存在"
+            exit 1
+          fi
+          if [ ! -f "dist/credentials/FeishuProjectApi.credentials.js" ]; then
+            echo "❌ 构建失败：凭据文件不存在"
+            exit 1
+          fi
+          echo "✅ 构建成功，所有必要文件都已生成"
+
+  validate-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 验证package.json
+        run: |
+          npm run build
+          npm pack --dry-run
+          echo "✅ 包验证通过"
+
+      - name: 检查n8n节点配置
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const fs = require('fs');
+
+            // 检查n8n配置
+            if (!pkg.n8n) {
+              console.error('❌ 缺少n8n配置');
+              process.exit(1);
+            }
+
+            // 检查凭据文件
+            const credFile = pkg.n8n.credentials[0];
+            if (!fs.existsSync(credFile)) {
+              console.error('❌ 凭据文件不存在:', credFile);
+              process.exit(1);
+            }
+
+            // 检查节点文件
+            const nodeFile = pkg.n8n.nodes[0];
+            if (!fs.existsSync(nodeFile)) {
+              console.error('❌ 节点文件不存在:', nodeFile);
+              process.exit(1);
+            }
+
+            console.log('✅ n8n节点配置验证通过');
+          "

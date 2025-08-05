@@ -1,0 +1,60 @@
+{
+  "name": "n8n-nodes-feishu-project",
+  "version": "0.1.0",
+  "description": "飞书项目 N8N 集成插件，支持附件管理等功能",
+  "keywords": [
+    "n8n-community-node-package",
+    "飞书项目",
+    "feishu",
+    "project",
+    "feishu-project"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "author": {
+    "name": "luka",
+    "email": "luka.cat.mimi@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luka-mimi/n8n-nodes-feishu-project"
+  },
+  "engines": {
+    "node": ">=20.15"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "npx rimraf dist && tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "format": "prettier nodes credentials --write",
+    "lint": "eslint nodes credentials package.json",
+    "lintfix": "eslint nodes credentials package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/FeishuProjectApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/FeishuProject/FeishuProject.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "~8.32.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "gulp": "^5.0.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "require-glob": "^4.1.0",
+    "glob": "^10.4.5",
+    "@types/node": "^22.13.1"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
