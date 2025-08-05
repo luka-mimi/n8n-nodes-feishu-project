@@ -38,6 +38,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
+          always-auth: true
 
       - name: 安装依赖
         run: npm ci
@@ -72,13 +73,30 @@ jobs:
         run: |
           echo "Registry: $(npm config get registry)"
           echo "Auth token configured: $(if [ -n "$NODE_AUTH_TOKEN" ]; then echo "Yes"; else echo "No"; fi)"
+          echo "Package name: $(npm pkg get name)"
+          echo "Package version: $(npm pkg get version)"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 验证构建产物
+        run: |
+          echo "检查dist目录内容:"
+          ls -la dist/
+          echo "检查主要文件是否存在:"
+          test -f dist/nodes/FeishuProject/FeishuProject.node.js && echo "✅ FeishuProject.node.js 存在"
+          test -f dist/credentials/FeishuProjectApi.credentials.js && echo "✅ FeishuProjectApi.credentials.js 存在"
+          test -f dist/package.json && echo "✅ dist/package.json 存在"
+
+      - name: 配置NPM认证
+        run: |
+          npm config set //registry.npmjs.org/:_authToken $NODE_AUTH_TOKEN
+          npm config set registry https://registry.npmjs.org/
+          npm whoami
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 发布到NPM
         run: |
-          echo "Publishing package: $(node -p "require('./package.json').name")"
-          echo "Version: $(node -p "require('./package.json').version")"
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
