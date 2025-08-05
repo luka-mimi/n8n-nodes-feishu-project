@@ -61,7 +61,7 @@ jobs:
           git add package.json package-lock.json
           git commit -m "chore: bump version to $NEW_VERSION"
           git tag $NEW_VERSION
-          git push origin main --follow-tags
+          git push origin HEAD --follow-tags
 
       - name: 获取版本号（标签触发）
         if: github.event_name == 'push'
