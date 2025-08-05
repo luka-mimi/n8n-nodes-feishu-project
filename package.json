@@ -14,14 +14,14 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "homepage": "",
+  "homepage": "https://github.com/luka-mimi/n8n-nodes-feishu-project#readme",
   "author": {
     "name": "luka",
     "email": "luka.cat.mimi@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/luka-mimi/n8n-nodes-feishu-project"
+    "url": "git+https://github.com/luka-mimi/n8n-nodes-feishu-project.git"
   },
   "engines": {
     "node": ">=20.15"
