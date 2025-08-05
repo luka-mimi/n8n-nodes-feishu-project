@@ -68,8 +68,18 @@ jobs:
         run: |
           echo "NEW_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
+      - name: 验证npm配置
+        run: |
+          echo "Registry: $(npm config get registry)"
+          echo "Auth token configured: $(if [ -n "$NODE_AUTH_TOKEN" ]; then echo "Yes"; else echo "No"; fi)"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: 发布到NPM
-        run: npm publish --provenance
+        run: |
+          echo "Publishing package: $(node -p "require('./package.json').name")"
+          echo "Version: $(node -p "require('./package.json').version")"
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -116,3 +126,4 @@ jobs:
           echo "🎉 发布成功！"
           echo "📦 NPM包: https://www.npmjs.com/package/@luka-cat-mimi/n8n-nodes-feishu-project"
           echo "🚀 GitHub Release: https://github.com/luka-mimi/n8n-nodes-feishu-project/releases/tag/${{ env.NEW_VERSION }}"
+          echo "📋 安装命令: npm install @luka-cat-mimi/n8n-nodes-feishu-project"
