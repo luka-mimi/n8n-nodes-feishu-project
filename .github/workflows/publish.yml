@@ -16,10 +16,14 @@ on:
           - minor
           - major
 
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: 正式环境  # ⬅️ 加上这一行！
+    environment: 正式环境
     permissions:
       contents: write
       packages: write
@@ -39,6 +43,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           always-auth: true
+
+      - name: 更新npm版本
+        run: npm install -g npm@latest
 
       - name: 安装依赖
         run: npm ci
@@ -71,41 +78,94 @@ jobs:
 
       - name: 验证构建产物
         run: |
-          echo "检查dist目录内容:"
+          echo "Checking dist directory contents:"
           ls -la dist/
-          echo "检查主要文件是否存在:"
-          test -f dist/nodes/FeishuProject/FeishuProject.node.js && echo "✅ FeishuProject.node.js 存在"
-          test -f dist/credentials/FeishuProjectApi.credentials.js && echo "✅ FeishuProjectApi.credentials.js 存在"
-          test -f dist/package.json && echo "✅ dist/package.json 存在"
+          echo "Checking if main files exist:"
+          test -f dist/nodes/FeishuProject/FeishuProject.node.js && echo "✅ FeishuProject.node.js exists"
+          test -f dist/nodes/FeishuProject/icon.svg && echo "✅ FeishuProject icon.svg exists"
+          test -f dist/credentials/FeishuProjectApi.credentials.js && echo "✅ FeishuProjectApi.credentials.js exists"
+          test -f dist/package.json && echo "✅ dist/package.json exists"
 
       - name: 发布到NPM
         run: |
-          npm publish --access public
+          npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 生成变更日志
         id: changelog
         run: |
+          # 设置默认变更日志
+          DEFAULT_CHANGELOG="🎉 版本 ${{ env.NEW_VERSION }} 发布
+
+          ### 📝 本次更新"
+
           if [ -f CHANGELOG.md ]; then
-            CHANGELOG=$(sed -n "/## \[${{ env.NEW_VERSION }}\]/,/## \[/p" CHANGELOG.md | head -n -1)
+            # 如果存在CHANGELOG.md，尝试提取当前版本的变更内容
+            EXTRACTED_CHANGELOG=$(sed -n "/## \[${{ env.NEW_VERSION }}\]/,/## \[/p" CHANGELOG.md | head -n -1)
+            if [ -n "$EXTRACTED_CHANGELOG" ]; then
+              CHANGELOG="$EXTRACTED_CHANGELOG"
+            else
+              # 没找到对应版本，使用git历史生成
+              CHANGELOG="$DEFAULT_CHANGELOG"
+              LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+              if [ -n "$LAST_TAG" ]; then
+                git log $LAST_TAG..HEAD --pretty=format:"- 📦 %s" --no-merges >> temp_changes.txt
+                if [ -s temp_changes.txt ]; then
+                  CHANGELOG="$CHANGELOG
+          $(cat temp_changes.txt)"
+                  rm -f temp_changes.txt
+                fi
+              else
+                CHANGELOG="$CHANGELOG
+          - 🎉 首次发布 n8n-nodes-feishu-project"
+              fi
+            fi
           else
-            CHANGELOG="🎉 版本 ${{ env.NEW_VERSION }} 发布
+            # 如果不存在CHANGELOG.md，生成基于git提交的变更日志
+            CHANGELOG="$DEFAULT_CHANGELOG"
+            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
-            ### 主要特性
-            - ✅ 支持飞书项目完整API集成
-            - ✅ 16个功能模块，73个操作
-            - ✅ 完善的文件上传和附件管理
-            - ✅ 统一的JSON参数设计
-            - ✅ TypeScript类型支持
+            if [ -n "$LAST_TAG" ]; then
+              # 获取提交历史
+              git log $LAST_TAG..HEAD --pretty=format:"%s" --no-merges > temp_commits.txt
+              if [ -s temp_commits.txt ]; then
+                while IFS= read -r commit_msg; do
+                  case "$commit_msg" in
+                    feat*|feature*) echo "- ✨ $commit_msg" ;;
+                    fix*|bugfix*) echo "- 🐛 $commit_msg" ;;
+                    docs*) echo "- 📚 $commit_msg" ;;
+                    chore*|ci*) echo "- 🔧 $commit_msg" ;;
+                    *) echo "- 📦 $commit_msg" ;;
+                  esac
+                done < temp_commits.txt > temp_changes.txt
 
-            ### 安装方式
-            \`\`\`bash
-            npm install @luka-cat-mimi/n8n-nodes-feishu-project
-            \`\`\`
-
-            详细使用说明请参见 [README.md](https://github.com/luka-mimi/n8n-nodes-feishu-project#readme)"
+                CHANGELOG="$CHANGELOG
+          $(cat temp_changes.txt)"
+                rm -f temp_commits.txt temp_changes.txt
+              else
+                CHANGELOG="$CHANGELOG
+          - 🔧 版本维护更新"
+              fi
+            else
+              CHANGELOG="$CHANGELOG
+          - 🎉 首次发布 n8n-nodes-feishu-project"
+            fi
           fi
+
+          # 添加安装说明
+          CHANGELOG="$CHANGELOG
+
+          ### 📦 安装方式
+          \`\`\`bash
+          npm install @luka-cat-mimi/n8n-nodes-feishu-project
+          \`\`\`
+
+          ### 🔗 相关链接
+          - [📖 使用文档](https://github.com/luka-mimi/n8n-nodes-feishu-project#readme)
+          - [📦 NPM包](https://www.npmjs.com/package/@luka-cat-mimi/n8n-nodes-feishu-project)
+          - [🐛 问题反馈](https://github.com/luka-mimi/n8n-nodes-feishu-project/issues)"
+
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -114,7 +174,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.NEW_VERSION }}
-          name: 版本 ${{ env.NEW_VERSION }}
+          name: ${{ env.NEW_VERSION }}
           body: ${{ steps.changelog.outputs.CHANGELOG }}
           draft: false
           prerelease: false
