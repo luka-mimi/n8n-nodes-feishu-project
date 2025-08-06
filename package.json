@@ -3,11 +3,14 @@
   "version": "1.0.10",
   "description": "飞书项目 N8N 集成插件，支持附件管理等功能",
   "keywords": [
+    "n8n",
+    "n8n-node",
     "n8n-community-node-package",
-    "飞书项目",
     "feishu",
+    "feishu-project",
+    "飞书项目",
     "project",
-    "feishu-project"
+    "飞书集成"
   ],
   "license": "MIT",
   "publishConfig": {
